@@ -11,6 +11,7 @@ class UserModel {
   final String phone;
   final String timezone;
   final String joinDate;
+  final String role; // 'user', 'admin', 'super_admin'
 
   UserModel({
     required this.username,
@@ -21,9 +22,13 @@ class UserModel {
     required this.phone,
     required this.timezone,
     required this.joinDate,
+    this.role = 'user',
   });
 
   String get fullName => '$surname $otherNames'.trim();
+  bool get isSuperAdmin => role == 'super_admin';
+  bool get isAdmin => role == 'admin' || role == 'super_admin';
+
   String get initials {
     final parts = fullName.split(' ');
     if (parts.length >= 2) {
@@ -46,6 +51,7 @@ class UserModel {
       phone: contact['phone']?.toString() ?? '',
       timezone: dated['timezone']?.toString() ?? '',
       joinDate: dated['join']?.toString() ?? '',
+      role: json['role']?.toString() ?? 'user',
     );
   }
 
@@ -55,6 +61,7 @@ class UserModel {
         'name': {'surname': surname, 'other_names': otherNames},
         'contact': {'email': email, 'phone': phone},
         'dated': {'timezone': timezone, 'join': joinDate},
+        'role': role,
       };
 
   String toStorageString() => jsonEncode(toJson());
@@ -166,6 +173,15 @@ class DocumentModel {
   final DocumentSize size;
   final DocumentDated dated;
   final DocumentLinks links;
+  
+  // Track soft-deletion, restoration, and new/updated statuses
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  final DateTime updatedAt;
+  final bool isRestored;
+  final String? originalFolderId;
+  final bool isNew;
+  final String ownerUsername;
 
   DocumentModel({
     required this.id,
@@ -175,22 +191,72 @@ class DocumentModel {
     required this.size,
     required this.dated,
     required this.links,
-  });
+    this.isDeleted = false,
+    this.deletedAt,
+    DateTime? updatedAt,
+    this.isRestored = false,
+    this.originalFolderId,
+    this.isNew = false,
+    this.ownerUsername = 'developer@razorinformatics.co.ke',
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
-  factory DocumentModel.fromJson(Map<String, dynamic> json) => DocumentModel(
-        id: json['id']?.toString() ?? '',
-        name: json['name']?.toString() ?? 'Untitled',
-        visibility: DocumentVisibility.fromJson(
-            json['visibility'] as Map<String, dynamic>? ?? {}),
-        type: DocumentType.fromJson(
-            json['type'] as Map<String, dynamic>? ?? {}),
-        size: DocumentSize.fromJson(
-            json['size'] as Map<String, dynamic>? ?? {}),
-        dated: DocumentDated.fromJson(
-            json['dated'] as Map<String, dynamic>? ?? {}),
-        links: DocumentLinks.fromJson(
-            json['links'] as Map<String, dynamic>? ?? {}),
-      );
+  factory DocumentModel.fromJson(Map<String, dynamic> json) {
+    return DocumentModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? 'Untitled',
+      visibility: DocumentVisibility.fromJson(
+          json['visibility'] as Map<String, dynamic>? ?? {}),
+      type: DocumentType.fromJson(
+          json['type'] as Map<String, dynamic>? ?? {}),
+      size: DocumentSize.fromJson(
+          json['size'] as Map<String, dynamic>? ?? {}),
+      dated: DocumentDated.fromJson(
+          json['dated'] as Map<String, dynamic>? ?? {}),
+      links: DocumentLinks.fromJson(
+          json['links'] as Map<String, dynamic>? ?? {}),
+      isDeleted: json['is_deleted'] as bool? ?? false,
+      deletedAt: json['deleted_at'] != null ? DateTime.tryParse(json['deleted_at'].toString()) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at'].toString()) : DateTime.now(),
+      isRestored: json['is_restored'] as bool? ?? false,
+      originalFolderId: json['original_folder_id']?.toString(),
+      isNew: json['is_new'] as bool? ?? false,
+      ownerUsername: json['owner_username']?.toString() ?? 'developer@razorinformatics.co.ke',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'visibility': {
+          'value': visibility.value,
+          'name': visibility.name,
+        },
+        'type': {
+          'mime': type.mime,
+          'extension': type.extension,
+          'img': type.img,
+        },
+        'size': {
+          'string': size.string,
+          'bytes': size.bytes,
+        },
+        'dated': {
+          'datetime': dated.datetime,
+          'string': dated.string,
+        },
+        'links': {
+          'detail': links.detail,
+          'summary': links.summary,
+          'move': links.move,
+        },
+        'is_deleted': isDeleted,
+        'deleted_at': deletedAt?.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+        'is_restored': isRestored,
+        'original_folder_id': originalFolderId,
+        'is_new': isNew,
+        'owner_username': ownerUsername,
+      };
 }
 
 // ─── Upload Result ─────────────────────────────────────────────────────────

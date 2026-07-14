@@ -1,7 +1,8 @@
 /// Sphere DMS — App Constants
 class AppConstants {
-  // API Base URL — update to your server
-  static const String baseUrl = 'https://towg.digichama.co.ke/api/v1/';
+  // API Base URL — default fallback, dynamically overrides using GetStorage
+  static const String defaultBaseUrl = 'http://192.168.1.80:8080/api/v1/';
+  static const String baseUrlKey = 'api_base_url';
 
   // Storage Keys
   static const String tokenKey = 'auth_token';

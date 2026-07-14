@@ -8,8 +8,9 @@ class ApiService {
   final _storage = GetStorage();
 
   ApiService() {
+    final url = _storage.read<String>(AppConstants.baseUrlKey) ?? AppConstants.defaultBaseUrl;
     _dio = Dio(BaseOptions(
-      baseUrl: AppConstants.baseUrl,
+      baseUrl: url,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 60),
       headers: {
@@ -166,6 +167,28 @@ class ApiService {
     return response.statusCode == 200 || response.statusCode == 204;
   }
 
+  Future<List<DocumentModel>> getDeletedDocuments() async {
+    final response = await _dio.get('documents/deleted');
+    if (response.statusCode == 200) {
+      final body = response.data as Map<String, dynamic>;
+      final List items = body['data'] as List? ?? [];
+      return items
+          .map((e) => DocumentModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<bool> restoreDocument(String id) async {
+    final response = await _dio.post('documents/$id/restore');
+    return response.statusCode == 200 || response.statusCode == 204;
+  }
+
+  Future<bool> forceDeleteDocument(String id) async {
+    final response = await _dio.delete('documents/$id/force');
+    return response.statusCode == 200 || response.statusCode == 204;
+  }
+
   Future<List<DocumentModel>> searchDocuments(String query) async {
     final response = await _dio.get('search', queryParameters: {'q': query});
     if (response.statusCode == 200) {
@@ -177,4 +200,11 @@ class ApiService {
     }
     return [];
   }
+
+  void setBaseUrl(String url) {
+    _dio.options.baseUrl = url;
+    _storage.write(AppConstants.baseUrlKey, url);
+  }
+
+  String get currentBaseUrl => _dio.options.baseUrl;
 }

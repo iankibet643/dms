@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:my_desktop_uploader/controllers/auth_controller.dart';
+import 'package:my_desktop_uploader/controllers/document_controller.dart';
 import 'package:my_desktop_uploader/theme/app_theme.dart';
 
 class SidebarWidget extends StatelessWidget {
@@ -16,6 +17,8 @@ class SidebarWidget extends StatelessWidget {
   static const _navItems = [
     _NavItem(Icons.dashboard_rounded, 'Dashboard'),
     _NavItem(Icons.folder_open_rounded, 'Documents'),
+    _NavItem(Icons.restore_page_rounded, 'Restored Files'),
+    _NavItem(Icons.delete_outline_rounded, 'Trash Bin'),
     _NavItem(Icons.cloud_upload_rounded, 'Upload'),
     _NavItem(Icons.person_outline_rounded, 'Profile'),
   ];
@@ -98,6 +101,51 @@ class SidebarWidget extends StatelessWidget {
                   ...List.generate(_navItems.length, (i) {
                     final item = _navItems[i];
                     final isSelected = i == selectedIndex;
+                    final docCtrl = Get.find<DocumentController>();
+                    
+                    Widget? trailing;
+                    if (i == 2) {
+                      trailing = Obx(() {
+                        final count = docCtrl.restoredDocuments.length;
+                        if (count == 0) return const SizedBox();
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.success.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: AppTheme.success,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        );
+                      });
+                    } else if (i == 3) {
+                      trailing = Obx(() {
+                        final count = docCtrl.trashDocuments.length;
+                        if (count == 0) return const SizedBox();
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.error.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: const TextStyle(
+                              color: AppTheme.error,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        );
+                      });
+                    }
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: _NavTile(
@@ -105,6 +153,7 @@ class SidebarWidget extends StatelessWidget {
                         label: item.label,
                         isSelected: isSelected,
                         onTap: () => onItemSelected(i),
+                        trailing: trailing,
                       ),
                     );
                   }),
@@ -174,10 +223,19 @@ class SidebarWidget extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '@${auth.username}',
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
+                            auth.user?.isSuperAdmin ?? false
+                                ? 'Super Admin'
+                                : auth.user?.isAdmin ?? false
+                                    ? 'Admin'
+                                    : 'User',
+                            style: TextStyle(
+                              color: auth.user?.isSuperAdmin ?? false
+                                  ? AppTheme.accent
+                                  : auth.user?.isAdmin ?? false
+                                      ? AppTheme.warning
+                                      : AppTheme.textSecondary,
                               fontSize: 11,
+                              fontWeight: FontWeight.bold,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -286,12 +344,14 @@ class _NavTile extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   const _NavTile({
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -332,19 +392,24 @@ class _NavTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected
-                        ? AppTheme.primary
-                        : AppTheme.textSecondary,
-                    fontSize: 14,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? AppTheme.primary
+                          : AppTheme.textSecondary,
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                    ),
                   ),
                 ),
-                if (isSelected) ...[
-                  const Spacer(),
+                if (trailing != null) ...[
+                  trailing!,
+                  const SizedBox(width: 8),
+                ],
+                if (isSelected)
                   Container(
                     width: 4,
                     height: 4,
@@ -353,7 +418,6 @@ class _NavTile extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                   ),
-                ],
               ],
             ),
           ),

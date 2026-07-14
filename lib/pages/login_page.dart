@@ -92,17 +92,17 @@ class _LoginPageState extends State<LoginPage>
               ),
               child: Stack(
                 children: [
-                  Positioned(
+                  const Positioned(
                     top: -80,
                     left: -80,
                     child: _GlowCircle(size: 300, opacity: 0.08),
                   ),
-                  Positioned(
+                  const Positioned(
                     bottom: -60,
                     right: -60,
                     child: _GlowCircle(size: 250, opacity: 0.06),
                   ),
-                  Positioned(
+                  const Positioned(
                     top: 200,
                     right: 40,
                     child: _GlowCircle(size: 120, opacity: 0.04),
@@ -163,7 +163,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                         ),
                         const SizedBox(height: 48),
-                        Wrap(
+                        const Wrap(
                           spacing: 12,
                           runSpacing: 10,
                           children: [

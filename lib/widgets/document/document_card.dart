@@ -92,6 +92,21 @@ class _DocumentCardState extends State<DocumentCard> {
                                   style: TextStyle(color: AppTheme.textPrimary)),
                             ]),
                           ),
+                          PopupMenuItem(
+                            value: doc.visibility.isPublic ? 'make_private' : 'make_public',
+                            child: Row(children: [
+                              Icon(
+                                doc.visibility.isPublic ? Icons.lock_outline_rounded : Icons.public_rounded,
+                                size: 16,
+                                color: AppTheme.textSecondary,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                doc.visibility.isPublic ? 'Make Private' : 'Make Public',
+                                style: const TextStyle(color: AppTheme.textPrimary),
+                              ),
+                            ]),
+                          ),
                           const PopupMenuDivider(),
                           PopupMenuItem(
                             value: 'delete',
@@ -176,10 +191,15 @@ class _DocumentCardState extends State<DocumentCard> {
         _openDocument(doc);
         break;
       case 'copy_link':
-        // Copy link to clipboard
         Get.snackbar('Copied', 'Link copied to clipboard',
             snackPosition: SnackPosition.BOTTOM,
             duration: const Duration(seconds: 2));
+        break;
+      case 'make_public':
+        ctrl.updateDocumentVisibility(doc.id, 'pub');
+        break;
+      case 'make_private':
+        ctrl.updateDocumentVisibility(doc.id, 'pri');
         break;
       case 'delete':
         _confirmDelete(doc, ctrl);
@@ -195,7 +215,7 @@ class _DocumentCardState extends State<DocumentCard> {
         title: const Text('Delete Document?',
             style: TextStyle(color: AppTheme.textPrimary)),
         content: Text(
-          'Are you sure you want to delete "${doc.name}"? This action cannot be undone.',
+          'Are you sure you want to delete "${doc.name}"? It will be moved to the Trash Bin for safety and can be retrieved by an administrator.',
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [

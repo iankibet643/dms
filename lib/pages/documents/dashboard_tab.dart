@@ -23,47 +23,60 @@ class DashboardTab extends StatelessWidget {
           const SizedBox(height: 28),
 
           // Stats row
-          Obx(() => Row(
-                children: [
-                  _StatCard(
-                    icon: Icons.folder_rounded,
-                    iconColor: AppTheme.primary,
-                    label: 'Total Documents',
-                    value: doc.totalDocuments.toString(),
-                    subtitle: 'Files in your vault',
-                  ),
+          Obx(() {
+            final isAdmin = auth.user?.isAdmin ?? false;
+            return Row(
+              children: [
+                _StatCard(
+                  icon: Icons.folder_rounded,
+                  iconColor: AppTheme.primary,
+                  label: 'Total Documents',
+                  value: doc.totalDocuments.toString(),
+                  subtitle: 'Active files in vault',
+                ),
+                const SizedBox(width: 16),
+                _StatCard(
+                  icon: Icons.storage_rounded,
+                  iconColor: AppTheme.accent,
+                  label: 'Storage Used',
+                  value: doc.storageUsedFormatted,
+                  subtitle: 'Across all files',
+                ),
+                const SizedBox(width: 16),
+                _StatCard(
+                  icon: Icons.public_rounded,
+                  iconColor: AppTheme.success,
+                  label: 'Public Files',
+                  value: doc.documents
+                      .where((d) => d.visibility.isPublic)
+                      .length
+                      .toString(),
+                  subtitle: 'Shared with others',
+                ),
+                const SizedBox(width: 16),
+                _StatCard(
+                  icon: Icons.lock_rounded,
+                  iconColor: AppTheme.warning,
+                  label: 'Private Files',
+                  value: doc.documents
+                      .where((d) => !d.visibility.isPublic)
+                      .length
+                      .toString(),
+                  subtitle: 'Visible to owners',
+                ),
+                if (isAdmin) ...[
                   const SizedBox(width: 16),
                   _StatCard(
-                    icon: Icons.storage_rounded,
-                    iconColor: AppTheme.accent,
-                    label: 'Storage Used',
-                    value: doc.storageUsedFormatted,
-                    subtitle: 'Across all files',
-                  ),
-                  const SizedBox(width: 16),
-                  _StatCard(
-                    icon: Icons.public_rounded,
-                    iconColor: AppTheme.success,
-                    label: 'Public Files',
-                    value: doc.documents
-                        .where((d) => d.visibility.isPublic)
-                        .length
-                        .toString(),
-                    subtitle: 'Shared with others',
-                  ),
-                  const SizedBox(width: 16),
-                  _StatCard(
-                    icon: Icons.lock_rounded,
-                    iconColor: AppTheme.warning,
-                    label: 'Private Files',
-                    value: doc.documents
-                        .where((d) => !d.visibility.isPublic)
-                        .length
-                        .toString(),
-                    subtitle: 'Only visible to you',
+                    icon: Icons.delete_sweep_rounded,
+                    iconColor: AppTheme.error,
+                    label: 'Trash Items',
+                    value: doc.trashDocuments.length.toString(),
+                    subtitle: 'Recoverable files',
                   ),
                 ],
-              )),
+              ],
+            );
+          }),
 
           const SizedBox(height: 32),
 
@@ -104,8 +117,211 @@ class DashboardTab extends StatelessWidget {
               itemBuilder: (_, i) => DocumentCard(document: recent[i]),
             );
           }),
+
+          // Admin Activity Log Feed
+          Obx(() {
+            final isAdmin = auth.user?.isAdmin ?? false;
+            if (!isAdmin) return const SizedBox();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 36),
+                const _AdminActivityFeed(),
+              ],
+            );
+          }),
         ],
       ),
+    );
+  }
+}
+
+// ── Admin Activity Feed Widget ───────────────────────────────────────────────
+
+class _AdminActivityFeed extends StatelessWidget {
+  const _AdminActivityFeed();
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.isNegative) return 'Just now';
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final docCtrl = Get.find<DocumentController>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'System Activity Log (Admin View)',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Monitor newly uploaded and updated documents across the system',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        ),
+        const SizedBox(height: 16),
+        Obx(() {
+          final logs = docCtrl.recentActivities;
+          if (logs.isEmpty) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.divider),
+              ),
+              child: const Center(
+                child: Text(
+                  'No recent system activities recorded.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              ),
+            );
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.divider),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: logs.length > 5 ? 5 : logs.length, // Show up to 5 items
+              separatorBuilder: (_, __) => Divider(color: AppTheme.divider, height: 1),
+              itemBuilder: (_, i) {
+                final log = logs[i];
+                IconData icon;
+                Color color;
+                String badgeText;
+                
+                switch (log.type) {
+                  case 'new':
+                    icon = Icons.cloud_upload_rounded;
+                    color = AppTheme.success;
+                    badgeText = 'NEW';
+                    break;
+                  case 'update':
+                    icon = Icons.edit_note_rounded;
+                    color = AppTheme.accent;
+                    badgeText = 'UPDATED';
+                    break;
+                  case 'restore':
+                    icon = Icons.restore_rounded;
+                    color = AppTheme.primary;
+                    badgeText = 'RESTORED';
+                    break;
+                  case 'delete':
+                    icon = Icons.delete_sweep_rounded;
+                    color = AppTheme.error;
+                    badgeText = 'DELETED';
+                    break;
+                  default:
+                    icon = Icons.info_rounded;
+                    color = AppTheme.textSecondary;
+                    badgeText = 'INFO';
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: color, size: 18),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    badgeText,
+                                    style: TextStyle(
+                                      color: color,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _timeAgo(log.timestamp),
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 13,
+                                  height: 1.3,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: log.fileName,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  const TextSpan(text: ' was '),
+                                  TextSpan(
+                                    text: log.type == 'new' 
+                                        ? 'uploaded' 
+                                        : log.type == 'update'
+                                            ? 'updated'
+                                            : log.type == 'restore'
+                                                ? 'restored'
+                                                : 'soft-deleted',
+                                    style: TextStyle(color: color, fontWeight: FontWeight.w500),
+                                  ),
+                                  const TextSpan(text: ' by '),
+                                  TextSpan(
+                                    text: log.ownerUsername,
+                                    style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+      ],
     );
   }
 }

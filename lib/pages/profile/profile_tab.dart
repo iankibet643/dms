@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:my_desktop_uploader/controllers/auth_controller.dart';
+import 'package:my_desktop_uploader/services/api_service.dart';
 import 'package:my_desktop_uploader/theme/app_theme.dart';
 
 class ProfileTab extends StatelessWidget {
@@ -155,6 +156,11 @@ class ProfileTab extends StatelessWidget {
                 ),
               ],
             ),
+
+            const SizedBox(height: 24),
+
+            // Developer settings
+            const _DevSettingsCard(),
 
             const SizedBox(height: 24),
 
@@ -376,6 +382,245 @@ class _InfoRow extends StatelessWidget {
                   size: 15, color: AppTheme.textSecondary),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Developer Settings Card Widget ───────────────────────────────────────────
+
+class _DevSettingsCard extends StatefulWidget {
+  const _DevSettingsCard();
+
+  @override
+  State<_DevSettingsCard> createState() => _DevSettingsCardState();
+}
+
+class _DevSettingsCardState extends State<_DevSettingsCard> {
+  final _urlCtrl = TextEditingController();
+  final _api = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _urlCtrl.text = _api.currentBaseUrl;
+  }
+
+  @override
+  void dispose() {
+    _urlCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Get.find<AuthController>();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.developer_mode_rounded, size: 20, color: AppTheme.accent),
+              const SizedBox(width: 10),
+              Text(
+                'Developer & System Settings',
+                style: TextStyle(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: AppTheme.divider),
+          const SizedBox(height: 16),
+          
+          // Role Switcher Section
+          const Text(
+            'Interactive Role Switcher',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Change user roles to test Super Admin document privacy, trash folders, and dashboard activities.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Obx(() {
+            final activeRole = auth.user?.role ?? 'user';
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _RoleButton(
+                  role: 'user',
+                  label: 'Normal User',
+                  icon: Icons.person_outline_rounded,
+                  isActive: activeRole == 'user',
+                  activeColor: AppTheme.primary,
+                  onTap: () => auth.changeDemoRole('user'),
+                ),
+                _RoleButton(
+                  role: 'admin',
+                  label: 'Administrator',
+                  icon: Icons.manage_accounts_rounded,
+                  isActive: activeRole == 'admin',
+                  activeColor: AppTheme.warning,
+                  onTap: () => auth.changeDemoRole('admin'),
+                ),
+                _RoleButton(
+                  role: 'super_admin',
+                  label: 'Super Admin',
+                  icon: Icons.admin_panel_settings_rounded,
+                  isActive: activeRole == 'super_admin',
+                  activeColor: AppTheme.accent,
+                  onTap: () => auth.changeDemoRole('super_admin'),
+                ),
+              ],
+            );
+          }),
+          
+          const SizedBox(height: 24),
+          
+          // Base URL Editor Section
+          const Text(
+            'Backend API Base URL',
+            style: TextStyle(
+              color: AppTheme.textPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Configure the endpoint for your local or production server environment.',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: TextField(
+                    controller: _urlCtrl,
+                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AppTheme.background,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppTheme.divider),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppTheme.divider),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final newUrl = _urlCtrl.text.trim();
+                  if (newUrl.isNotEmpty) {
+                    _api.setBaseUrl(newUrl);
+                    Get.snackbar(
+                      'URL Saved',
+                      'API base URL updated to: $newUrl',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: const Color(0xFF2ECC71),
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.save_rounded, size: 16),
+                label: const Text('Save'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleButton extends StatelessWidget {
+  final String role;
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const _RoleButton({
+    required this.role,
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor.withOpacity(0.12) : AppTheme.background,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive ? activeColor : AppTheme.divider,
+            width: isActive ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? activeColor : AppTheme.textSecondary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? activeColor : AppTheme.textSecondary,
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

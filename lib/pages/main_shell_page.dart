@@ -4,6 +4,8 @@ import 'package:my_desktop_uploader/controllers/auth_controller.dart';
 import 'package:my_desktop_uploader/controllers/document_controller.dart';
 import 'package:my_desktop_uploader/pages/documents/dashboard_tab.dart';
 import 'package:my_desktop_uploader/pages/documents/documents_tab.dart';
+import 'package:my_desktop_uploader/pages/documents/restored_tab.dart';
+import 'package:my_desktop_uploader/pages/documents/trash_tab.dart';
 import 'package:my_desktop_uploader/pages/documents/upload_tab.dart';
 import 'package:my_desktop_uploader/pages/profile/profile_tab.dart';
 import 'package:my_desktop_uploader/theme/app_theme.dart';
@@ -22,6 +24,8 @@ class _MainShellPageState extends State<MainShellPage> {
   final _pages = const [
     DashboardTab(),
     DocumentsTab(),
+    RestoredTab(),
+    TrashTab(),
     UploadTab(),
     ProfileTab(),
   ];
@@ -58,10 +62,19 @@ class _TopBar extends StatelessWidget {
   final int pageIndex;
   const _TopBar({required this.pageIndex});
 
-  static const _titles = ['Dashboard', 'Documents', 'Upload Files', 'Profile'];
+  static const _titles = [
+    'Dashboard',
+    'Documents',
+    'Restored Files',
+    'Trash Bin',
+    'Upload Files',
+    'Profile'
+  ];
   static const _subtitles = [
     'Overview of your document vault',
     'Browse and manage your files',
+    'Directory of recovered documents',
+    'Soft-deleted items pending purging',
     'Upload new files to your vault',
     'Account settings and info',
   ];
@@ -102,7 +115,7 @@ class _TopBar extends StatelessWidget {
           ),
           const Spacer(),
           // Search bar
-          if (pageIndex == 1) const _SearchBar(),
+          if (pageIndex == 1 || pageIndex == 2 || pageIndex == 3) const _SearchBar(),
           const SizedBox(width: 20),
           // User avatar
           Obx(() => _UserAvatarButton(
@@ -246,11 +259,14 @@ class _UserAvatarButton extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Text(
-                'Administrator',
-                style:
-                    TextStyle(color: AppTheme.textSecondary, fontSize: 11),
-              ),
+              Obx(() => Text(
+                auth.user?.isSuperAdmin ?? false
+                    ? 'Super Admin'
+                    : auth.user?.isAdmin ?? false
+                        ? 'Admin'
+                        : 'User',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+              )),
             ],
           ),
           const SizedBox(width: 8),
